@@ -17,9 +17,9 @@ def load_params(params_path: str = "params.yaml") -> dict:
 
 
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
-    logging.info("Preprocessing credit card fraud data")
+    logging.info("Preprocessing customer churn data")
     df = df.copy().dropna()
-    features = ["TransactionID", "Amount", "Time", "isFraud"]
+    features = ["customerID", "gender", "SeniorCitizen", "tenure", "Churn"]
     df = df[features]
     logging.info("Preprocessing completed")
     return df
@@ -36,7 +36,7 @@ def save_data(df: pd.DataFrame, model_name: str, test_size: float, random_state:
 
 
 def main():
-    model_name = "fraud_detection"
+    model_name = "customer_churn"
     params = load_params()
     ingestion_params = params["models"][model_name]["data_ingestion"]
 
