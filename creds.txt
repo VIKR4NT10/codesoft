@@ -7,3 +7,12 @@ import mlflow
 with mlflow.start_run():
   mlflow.log_param('parameter name', 'value')
   mlflow.log_metric('metric name', 1)
+
+
+  mongo db cred
+
+  user - vikrantschavan3_db_user
+  password - phcRoZI9ImCPXxin
+  
+  connection string - mongodb+srv://vikrantschavan3_db_user:phcRoZI9ImCPXxin@cluster0.d0dk86t.mongodb.net/?appName=Cluster0
+  $env:MONGODB_URL = "mongodb+srv://vikrantschavan3_db_user:phcRoZI9ImCPXxin@cluster0.d0dk86t.mongodb.net/?appName=Cluster0"

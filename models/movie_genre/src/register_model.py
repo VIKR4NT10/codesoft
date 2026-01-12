@@ -4,7 +4,7 @@ import json
 import os
 import warnings
 import mlflow
-from mlflow.tracking import MlflowClient
+from mlflow import MlflowClient
 from logger import logging
 import dagshub
 
@@ -128,7 +128,7 @@ def register_and_maybe_promote(model_name: str, model_info: dict):
 
 def main():
     try:
-        model_info = load_model_info("reports/experiment_info.json")
+        model_info = load_model_info("reports/movie_genre/experiment_info.json")
         model_name = "my_model"
 
         register_and_maybe_promote(model_name, model_info)

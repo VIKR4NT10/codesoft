@@ -3,7 +3,7 @@ import yaml
 import pickle
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from src.logger import logging
+from logger import logging
 
 
 def load_params(params_path: str = "params.yaml") -> dict:
@@ -40,10 +40,10 @@ def apply_tfidf(
     )
 
     X_train = train_df["text"].values
-    y_train = train_df["GENRE"].values
+    y_train = train_df["genre"].values
 
     X_test = test_df["text"].values
-    y_test = test_df["GENRE"].values
+    y_test = test_df["genre"].values
 
     X_train_tfidf = vectorizer.fit_transform(X_train)
     X_test_tfidf = vectorizer.transform(X_test)
@@ -59,7 +59,7 @@ def apply_tfidf(
     artifact_path = os.path.join("artifacts", "movie_genre")
     os.makedirs(artifact_path, exist_ok=True)
 
-    with open(os.path.join(artifact_path, "tfidf_vectorizer.pkl"), "wb") as f:
+    with open(os.path.join(artifact_path, "vectorizer.pkl"), "wb") as f:
         pickle.dump(vectorizer, f)
 
     logging.info("TF-IDF vectorizer saved")

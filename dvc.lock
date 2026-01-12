@@ -1,0 +1,30 @@
+schema: '2.0'
+stages:
+  data_ingestion@movie_genre:
+    cmd: python models/movie_genre/src/data_ingestion.py
+    deps:
+    - path: connections/mongo_connection.py
+      hash: md5
+      md5: 5d29c45bf03147b498f346ebd7119092
+      size: 1516
+    - path: models/movie_genre/src/data_ingestion.py
+      hash: md5
+      md5: 37d803765faa2865f325a011a2b53200
+      size: 1830
+    - path: params.yaml
+      hash: md5
+      md5: ca48cddf7705595104f0e56927da7f0e
+      size: 605
+    params:
+      params.yaml:
+        global.mongodb.database_name: capstone_db
+        global.mongodb.url_env_key: MONGODB_URL
+        global.random_state: 42
+        models.movie_genre.data_ingestion.collection_name: movie_genre
+        models.movie_genre.data_ingestion.test_size: 0.2
+    outs:
+    - path: models/movie_genre/data/raw
+      hash: md5
+      md5: 22ff502d5a610c76e8317fc2527cfc77.dir
+      size: 34696359
+      nfiles: 2

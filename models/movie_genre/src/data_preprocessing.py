@@ -45,11 +45,7 @@ def clean_text(text: str, stop_words, lemmatizer) -> str:
 
 
 def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Preprocess movie genre dataset
-    Expected columns:
-    ID, TITLE, GENRE, DESCRIPTION
-    """
+    
     logging.info("Starting movie genre preprocessing")
 
     df = df.copy()
@@ -59,7 +55,7 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     # Combine TITLE and DESCRIPTION (optional but powerful)
     df["text"] = (
-        df["TITLE"].fillna("") + " " + df["DESCRIPTION"].fillna("")
+        df["title"].fillna("") + " " + df["description"].fillna("")
     )
 
     # Apply cleaning
@@ -71,7 +67,7 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df = df[df["text"].str.split().str.len() > 3]
 
     # Keep only required columns
-    df = df[["ID", "text", "GENRE"]]
+    df = df[["text", "genre"]]
 
     logging.info("Movie genre preprocessing completed")
     return df

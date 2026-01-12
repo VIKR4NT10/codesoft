@@ -1,0 +1,32 @@
+global:
+  random_state: 42
+
+  mongodb:
+    database_name: capstone_db
+    url_env_key: MONGODB_URL
+
+models:
+  movie_genre:
+    data_ingestion:
+      collection_name: movie_genre
+      test_size: 0.2
+
+    feature_engineering:
+      max_features: 6000
+      ngram_range: [1, 1]
+      min_df: 4
+      max_df: 0.95
+
+    model:
+      type: linear_svm
+      C: 0.6901505730083063
+
+  customer_churn:
+    data_ingestion:
+      collection_name: churn_data
+      test_size: 0.2
+
+  credit_card_fraud:
+    data_ingestion:
+      collection_name: fraud_transactions
+      test_size: 0.2

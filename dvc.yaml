@@ -1,57 +1,81 @@
 stages:
 
   data_ingestion:
-    cmd: python models/movie_genre/data_ingestion.py
-    deps:
-      - models/movie_genre/data_ingestion.py
-      - src/connections/mongodb_connection.py
-      - params.yaml
-    outs:
-      - data/movie_genre/raw/train.csv
-      - data/movie_genre/raw/test.csv
-
+    foreach:
+      - movie_genre
+      # - credit_card_fraud
+      # - customer_churn
+    do:
+      cmd: python models/${item}/src/data_ingestion.py
+      deps:
+        - models/${item}/src/data_ingestion.py
+        - connections/mongo_connection.py
+        - params.yaml
+      params:
+        - global.random_state
+        - global.mongodb
+        - models.${item}.data_ingestion
+      outs:
+        - data/${item}/raw
 
   data_preprocessing:
-    cmd: python models/movie_genre/data_preprocessing.py
-    deps:
-      - models/movie_genre/data_preprocessing.py
-      - data/movie_genre/raw/train.csv
-      - data/movie_genre/raw/test.csv
-    outs:
-      - data/movie_genre/interim/train_processed.csv
-      - data/movie_genre/interim/test_processed.csv
-
+    foreach:
+      - movie_genre
+      # - credit_card_fraud
+      # - customer_churn
+    do:
+      cmd: python models/${item}/src/data_preprocessing.py
+      deps:
+        - models/${item}/src/data_preprocessing.py
+        - data/${item}/raw
+      outs:
+        - data/${item}/processed
 
   feature_engineering:
-    cmd: python models/movie_genre/feature_engineering.py
-    deps:
-      - models/movie_genre/feature_engineering.py
-      - data/movie_genre/interim/train_processed.csv
-      - data/movie_genre/interim/test_processed.csv
-      - params.yaml
-    outs:
-      - data/movie_genre/processed/train_tfidf.csv
-      - data/movie_genre/processed/test_tfidf.csv
-      - models/movie_genre/vectorizer.pkl
+    foreach:
+      - movie_genre
+      # - credit_card_fraud
+      # - customer_churn
+    do:
+      cmd: python models/${item}/src/feature_engineering.py
+      deps:
+        - models/${item}/src/feature_engineering.py
+        - data/${item}/processed
+      params:
+        - models.${item}.feature_engineering
+      outs:
+        - data/${item}/processed
+        - artifacts/${item}/vectorizer.pkl
 
-
-  model_building:
-    cmd: python models/movie_genre/model_building.py
-    deps:
-      - models/movie_genre/model_building.py
-      - data/movie_genre/processed/train_tfidf.csv
-      - models/movie_genre/vectorizer.pkl
-      - params.yaml
-    outs:
-      - models/movie_genre/model.pkl
-
+  model_training:
+    foreach:
+      - movie_genre
+      # - credit_card_fraud
+      # - customer_churn
+    do:
+      cmd: python models/${item}/src/model_training.py
+      deps:
+        - models/${item}/src/model_training.py
+        - data/${item}/features
+        - artifacts/${item}/vectorizer.pkl
+      params:
+        - models.${item}.model
+      outs:
+        - artifacts/${item}/model.pkl
 
   model_evaluation:
-    cmd: python models/movie_genre/model_evaluation.py
-    deps:
-      - models/movie_genre/model_evaluation.py
-      - models/movie_genre/model.pkl
-      - data/movie_genre/processed/test_tfidf.csv
-    outs:
-      - reports/metrics.json
-      - reports/experiment_info.json
+    foreach:
+      - movie_genre
+      # - credit_card_fraud
+      # - customer_churn
+    do:
+      cmd: python models/${item}/src/model_evaluation.py
+      deps:
+        - models/${item}/src/model_evaluation.py
+        - artifacts/${item}/model.pkl
+        - artifacts/${item}/vectorizer.pkl
+        - data/${item}/processed
+      metrics:
+        - reports/${item}/metrics.json
+      outs:
+        - reports/${item}/experiment_info.json
