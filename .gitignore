@@ -121,3 +121,4 @@ creds.txt
 notebooks/mongodb.ipynb
 notebooks/train_data.txt
 requirements.txt
+creds.txt
