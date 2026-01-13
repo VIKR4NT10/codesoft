@@ -118,7 +118,7 @@ logs/
 .DS_Store
 Thumbs.db
 creds.txt
-notebooks/Genre Classification Dataset/mongodb.ipynb
-notebooks/Genre Classification Dataset/train_data.txt
+notebooks/
+
 requirements.txt
 creds.txt
