@@ -9,22 +9,128 @@ stages:
       size: 1516
     - path: models/movie_genre/src/data_ingestion.py
       hash: md5
-      md5: 37d803765faa2865f325a011a2b53200
-      size: 1830
+      md5: 00b56d4509b8bf036a1e0b86d3ab6768
+      size: 1805
     - path: params.yaml
       hash: md5
       md5: ca48cddf7705595104f0e56927da7f0e
       size: 605
     params:
       params.yaml:
-        global.mongodb.database_name: capstone_db
-        global.mongodb.url_env_key: MONGODB_URL
+        global.mongodb:
+          database_name: capstone_db
+          url_env_key: MONGODB_URL
         global.random_state: 42
-        models.movie_genre.data_ingestion.collection_name: movie_genre
-        models.movie_genre.data_ingestion.test_size: 0.2
+        models.movie_genre.data_ingestion:
+          collection_name: movie_genre
+          test_size: 0.2
     outs:
-    - path: models/movie_genre/data/raw
+    - path: data/movie_genre/raw
       hash: md5
       md5: 22ff502d5a610c76e8317fc2527cfc77.dir
       size: 34696359
       nfiles: 2
+  data_preprocessing@movie_genre:
+    cmd: python models/movie_genre/src/data_preprocessing.py
+    deps:
+    - path: data/movie_genre/raw
+      hash: md5
+      md5: 22ff502d5a610c76e8317fc2527cfc77.dir
+      size: 34696359
+      nfiles: 2
+    - path: models/movie_genre/src/data_preprocessing.py
+      hash: md5
+      md5: 0b5c965f269ac9f825d8ef3e7447785c
+      size: 2839
+    outs:
+    - path: data/movie_genre/processed
+      hash: md5
+      md5: 9a1a11e05d51c51f7d96f2dce14e3056.dir
+      size: 23329295
+      nfiles: 2
+  feature_engineering@movie_genre:
+    cmd: python models/movie_genre/src/feature_engineering.py
+    deps:
+    - path: data/movie_genre/processed
+      hash: md5
+      md5: 9a1a11e05d51c51f7d96f2dce14e3056.dir
+      size: 23329295
+      nfiles: 2
+    - path: models/movie_genre/src/feature_engineering.py
+      hash: md5
+      md5: 59db8eb4ec5d1c03a87e8a4e68a86e1e
+      size: 3075
+    params:
+      params.yaml:
+        models.movie_genre.feature_engineering:
+          max_features: 6000
+          ngram_range:
+          - 1
+          - 1
+          min_df: 4
+          max_df: 0.95
+    outs:
+    - path: artifacts/movie_genre/vectorizer.pkl
+      hash: md5
+      md5: 495fbd7d6595018aef08b9ff757c8f0e
+      size: 196668
+    - path: data/movie_genre/features
+      hash: md5
+      md5: 3630b0e08b9e0548ebf2417ebfa2d722.dir
+      size: 1335440686
+      nfiles: 2
+  model_training@movie_genre:
+    cmd: python models/movie_genre/src/model_training.py
+    deps:
+    - path: artifacts/movie_genre/vectorizer.pkl
+      hash: md5
+      md5: 495fbd7d6595018aef08b9ff757c8f0e
+      size: 196668
+    - path: data/movie_genre/features
+      hash: md5
+      md5: 3630b0e08b9e0548ebf2417ebfa2d722.dir
+      size: 1335440686
+      nfiles: 2
+    - path: models/movie_genre/src/model_training.py
+      hash: md5
+      md5: 90eca7b94d1692601c26c7f72779ef27
+      size: 2201
+    params:
+      params.yaml:
+        models.movie_genre.model:
+          type: linear_svm
+          C: 0.6901505730083063
+    outs:
+    - path: artifacts/movie_genre/model.pkl
+      hash: md5
+      md5: 91a8779eb3d3932695015a92d58c56d7
+      size: 1297073
+  model_evaluation@movie_genre:
+    cmd: python models/movie_genre/src/model_evaluation.py
+    deps:
+    - path: artifacts/movie_genre/model.pkl
+      hash: md5
+      md5: 91a8779eb3d3932695015a92d58c56d7
+      size: 1297073
+    - path: artifacts/movie_genre/vectorizer.pkl
+      hash: md5
+      md5: 495fbd7d6595018aef08b9ff757c8f0e
+      size: 196668
+    - path: data/movie_genre/processed
+      hash: md5
+      md5: 9a1a11e05d51c51f7d96f2dce14e3056.dir
+      size: 23329295
+      nfiles: 2
+    - path: models/movie_genre/src/model_evaluation.py
+      hash: md5
+      md5: cf01062e096954e9e67638f5495f45eb
+      size: 5073
+    outs:
+    - path: reports/movie_genre/experiment_info.json
+      hash: md5
+      md5: 598234e2791ef322d2abdbf8ba36df11
+      size: 177
+    - path: reports/movie_genre/metrics.json
+      hash: md5
+      md5: 238fbd34266c135f1716737020ec07b9
+      size: 294

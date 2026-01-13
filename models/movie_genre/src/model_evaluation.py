@@ -88,7 +88,7 @@ def main():
         try:
             # Load artifacts
             model_path = os.path.join(
-                "artifacts", "movie_genre", "svm_model.pkl"
+                "artifacts", "movie_genre", "model.pkl"
             )
             test_path = os.path.join(
                 "data", "movie_genre", "features", "test_tfidf.csv"
@@ -124,10 +124,12 @@ def main():
 
             # Save run info
             run_info = {
-                "run_id": run.info.run_id,
-                "experiment": "movie-genre-svm",
-                "model_path": "svm_model"
+            "run_id": run.info.run_id,
+            "experiment": "movie-genre",
+            "model_type": "svm",
+            "model_artifact_path": "artifacts/movie_genre/model.pkl"
             }
+
             save_json(
                 run_info,
                 os.path.join(reports_dir, "experiment_info.json")

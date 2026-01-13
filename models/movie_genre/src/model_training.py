@@ -66,7 +66,7 @@ def main():
 
         # Save model
         artifact_dir = os.path.join("artifacts", "movie_genre")
-        save_artifact(model, os.path.join(artifact_dir, "svm_model.pkl"))
+        save_artifact(model, os.path.join(artifact_dir, "model.pkl"))
 
         logging.info("Model building pipeline completed successfully")
 

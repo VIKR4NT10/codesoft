@@ -88,3 +88,36 @@ target/
 # Mypy cache
 .mypy_cache/
 notebooks/Genre Classification Dataset/
+# Environments
+.env
+.env.*
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Data & artifacts
+data/
+artifacts/
+reports/
+
+# Logs
+*.log
+logs/
+
+# DVC
+.dvc/cache/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+creds.txt
+notebooks/mongodb.ipynb
+notebooks/train_data.txt
+requirements.txt

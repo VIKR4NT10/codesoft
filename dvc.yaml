@@ -44,7 +44,7 @@ stages:
       params:
         - models.${item}.feature_engineering
       outs:
-        - data/${item}/processed
+        - data/${item}/features
         - artifacts/${item}/vectorizer.pkl
 
   model_training:
