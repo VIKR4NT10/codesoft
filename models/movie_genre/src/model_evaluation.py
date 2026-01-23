@@ -24,7 +24,7 @@ from logger import logging
 # os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
 
 # dagshub_url = "https://dagshub.com"
-# repo_owner = "VIKR$NT"
+# repo_owner = "VIKR4NT"
 # repo_name = "codesoft"
 
 # mlflow.set_tracking_uri(f"{dagshub_url}/{repo_owner}/{repo_name}.mlflow")

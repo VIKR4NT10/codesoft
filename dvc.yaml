@@ -2,8 +2,8 @@ stages:
 
   data_ingestion:
     foreach:
-      - movie_genre
-      # - credit_card_fraud
+      # - movie_genre
+      - fraud_detection
       # - customer_churn
     do:
       cmd: python models/${item}/src/data_ingestion.py
@@ -20,8 +20,8 @@ stages:
 
   data_preprocessing:
     foreach:
-      - movie_genre
-      # - credit_card_fraud
+      # - movie_genre
+      - fraud_detection
       # - customer_churn
     do:
       cmd: python models/${item}/src/data_preprocessing.py
@@ -33,8 +33,8 @@ stages:
 
   feature_engineering:
     foreach:
-      - movie_genre
-      # - credit_card_fraud
+      # - movie_genre
+      - fraud_detection
       # - customer_churn
     do:
       cmd: python models/${item}/src/feature_engineering.py
@@ -49,8 +49,8 @@ stages:
 
   model_training:
     foreach:
-      - movie_genre
-      # - credit_card_fraud
+      # - movie_genre
+      - fraud_detection
       # - customer_churn
     do:
       cmd: python models/${item}/src/model_training.py
@@ -65,8 +65,8 @@ stages:
 
   model_evaluation:
     foreach:
-      - movie_genre
-      # - credit_card_fraud
+      # - movie_genre
+      - fraud_detection
       # - customer_churn
     do:
       cmd: python models/${item}/src/model_evaluation.py

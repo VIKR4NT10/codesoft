@@ -29,4 +29,11 @@ models:
   credit_card_fraud:
     data_ingestion:
       collection_name: fraud_transactions
-      test_size: 0.2
+    model:
+      type: random_forest
+      rf__n_estimators: 200
+      rf__min_samples_leaf: 20
+      rf__max_features: 0.5
+      rf__max_depth: null
+      rf__bootstrap: false
+     
