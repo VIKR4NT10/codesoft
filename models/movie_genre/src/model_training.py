@@ -50,7 +50,7 @@ def main():
         params = load_params()
 
         # Optuna-tuned hyperparameters
-        svm_C = params["models"]["movie_genre"]["model"]["C"]
+        svm_C = params["models"]["movie_genre"]["training"]["C"]
 
         # Load training data
         feature_path = os.path.join(

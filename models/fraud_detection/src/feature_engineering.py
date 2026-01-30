@@ -103,6 +103,10 @@ def create_features(df: pd.DataFrame):
         .std()
         .reset_index(level=0, drop=True)
     )
+    count_cols = ["txn_count_1h", "txn_count_24h"]
+    for col in count_cols:
+        df[col] = df[col].fillna(0)
+
 
     df["amt_zscore_24h"] = (
         df["amt"] - df["amt_mean_24h"]
@@ -114,6 +118,9 @@ def create_features(df: pd.DataFrame):
     df["geo_distance_km"] = haversine(
         df["lat"], df["long"], df["merch_lat"], df["merch_long"]
     )
+    df["geo_distance_km_missing"] = df["geo_distance_km"].isna().astype(int)
+    df["geo_distance_km"] = df["geo_distance_km"].fillna( df["geo_distance_km"].median()
+)
 
     # Time-based split
     split_time = df["trans_date_trans_time"].quantile(0.8)
@@ -134,6 +141,30 @@ def create_features(df: pd.DataFrame):
         for d in [train_df, test_df]:
             d[f"{col}_missing"] = d[col].isna().astype(int)
             d[col] = d[col].fillna(median)
+    FINAL_FEATURES = [
+    'amt', 'gender', 'city_pop', 'age', 'transaction_hour',
+    'transaction_day', 'transaction_month', 'transaction_weekday',    'is_weekend',
+    'txn_count_1h', 'txn_count_24h',
+    'amt_mean_24h', 'amt_std_24h', 'amt_zscore_24h',    'amt_mean_24h_missing', 'amt_std_24h_missing',
+    'amt_zscore_24h_missing', 'geo_distance_km', 'merchant_risk', 'category_risk', 'job_risk',
+    'lat', 'long', 'merch_lat', 'merch_long']
+
+    required = FINAL_FEATURES + ["is_fraud"]
+
+    missing = set(required) - set(train_df.columns)
+    if missing:
+        raise ValueError(f"Missing expected features: {missing}")
+
+    train_df = train_df[required].copy()
+    test_df  = test_df[required].copy()
+    
+    nan_cols = train_df.columns[train_df.isna().any()].tolist()
+    if nan_cols:
+        raise ValueError(f"NaNs detected in train_df columns: {nan_cols}")
+
+    nan_cols = test_df.columns[test_df.isna().any()].tolist()
+    if nan_cols:
+        raise ValueError(f"NaNs detected in test_df columns: {nan_cols}")
 
     logging.info(
         f"Feature engineering complete. "
@@ -164,14 +195,14 @@ def save_features(train_df, test_df, features_dir: Path):
 # -------------------------------
 if __name__ == "__main__":
     try:
-        with open("params.yaml") as f:
-            config = yaml.safe_load(f)
+        # with open("params.yaml") as f:
+        #     config = yaml.safe_load(f)
 
-        MODEL_NAME = "credit_card_fraud"
-        model_cfg = config["models"][MODEL_NAME]
+        # MODEL_NAME = "fraud_detection"
+        # model_cfg = config["models"][MODEL_NAME]
 
-        processed_dir = Path(config["paths"]["processed_data"]) / MODEL_NAME
-        features_dir = Path(config["paths"]["features_data"]) / MODEL_NAME
+        processed_dir = Path("data/fraud_detection/processed")
+        features_dir = Path("data/fraud_detection/features")
 
         df = load_preprocessed_data(processed_dir)
 

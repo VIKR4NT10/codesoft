@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spam SMS Classifier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 2rem;
+        }
+        
+        .back-btn {
+            text-decoration: none;
+            color: #4CAF50;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 2px solid #4CAF50;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 150px;
+            transition: border-color 0.3s ease;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .result-section {
+            margin-top: 40px;
+            padding: 30px;
+            border-radius: 15px;
+            display: none;
+        }
+        
+        .spam-result {
+            background: #ffebee;
+            border-left: 5px solid #f44336;
+        }
+        
+        .ham-result {
+            background: #e8f5e9;
+            border-left: 5px solid #4CAF50;
+        }
+        
+        .result-title {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .prediction {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 10px 20px;
+            background: white;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .spam-prediction {
+            color: #f44336;
+        }
+        
+        .ham-prediction {
+            color: #4CAF50;
+        }
+        
+        .probability-bar {
+            margin-top: 20px;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .probability-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        
+        .spam-fill {
+            background: #f44336;
+        }
+        
+        .ham-fill {
+            background: #4CAF50;
+        }
+        
+        .probability-text {
+            margin-top: 10px;
+            color: #666;
+            font-weight: bold;
+        }
+        
+        .details {
+            margin-top: 20px;
+            color: #666;
+        }
+        
+        .loader {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .examples {
+            margin-top: 30px;
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 15px;
+        }
+        
+        .examples h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .example-btn {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 15px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .example-btn:hover {
+            background: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Spam SMS Classifier</h1>
+            <a href="/" class="back-btn">← Back to Home</a>
+        </div>
+        
+        <p>Enter an SMS message to check if it's spam or ham (legitimate)</p>
+        
+        <div class="input-section">
+            <textarea id="textInput" placeholder="Enter SMS text here..."></textarea>
+            
+            <button class="btn" onclick="predictSpam()" id="predictBtn">Check for Spam</button>
+            
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <p>Analyzing message...</p>
+            </div>
+        </div>
+        
+        <div class="result-section" id="resultSection">
+            <h2 class="result-title">📊 Analysis Result</h2>
+            <div class="prediction" id="predictionResult">HAM</div>
+            
+            <div class="probability-bar">
+                <div class="probability-fill" id="probabilityFill" style="width: 50%"></div>
+            </div>
+            
+            <div class="probability-text">
+                Confidence: <span id="probabilityText">50%</span>
+            </div>
+            
+            <div class="details">
+                <p><strong>Message:</strong> <span id="analyzedText"></span></p>
+                <p><strong>Processing Time:</strong> <span id="processingTime"></span> seconds</p>
+            </div>
+        </div>
+        
+        <div class="examples">
+            <h3>Try these examples:</h3>
+            <button class="example-btn" onclick="loadExample('Congrats! You won a $1000 Walmart gift card. Click here to claim: http://bit.ly/win1000')">
+                🎁 Gift Card Offer
+            </button>
+            <button class="example-btn" onclick="loadExample('Hi mom, can you pick up some milk on your way home?')">
+                👨‍👩‍👧‍👦 Family Message
+            </button>
+            <button class="example-btn" onclick="loadExample('URGENT: Your bank account needs verification. Click now: bank-secure.com/verify')">
+                🏦 Bank Alert
+            </button>
+            <button class="example-btn" onclick="loadExample('Meeting tomorrow at 10 AM in conference room B. Please bring the Q3 reports.')">
+                💼 Work Message
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        async function predictSpam() {
+            const textInput = document.getElementById('textInput').value.trim();
+            const predictBtn = document.getElementById('predictBtn');
+            const loader = document.getElementById('loader');
+            const resultSection = document.getElementById('resultSection');
+            
+            console.log("📝 Text input:", textInput);
+            
+            if (!textInput) {
+                alert('Please enter a message to analyze.');
+                return;
+            }
+            
+            // Show loader, disable button
+            predictBtn.disabled = true;
+            predictBtn.textContent = 'Checking...';
+            loader.style.display = 'block';
+            resultSection.style.display = 'none';
+            
+            try {
+                const formData = new FormData();
+                formData.append('text', textInput);
+                
+                console.log("🚀 Sending request to /predict/spam_sms");
+                
+                const response = await fetch('/predict/spam_sms', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log("✅ Response received, status:", response.status);
+                
+                const data = await response.json();
+                console.log("📊 Response data:", data);
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                if (data.error && !data.prediction) {
+                    throw new Error(data.error);
+                }
+                
+                // Update UI with results
+                const isSpam = data.prediction === 'SPAM';
+                const probability = data.probability || 0.5;
+                
+                // Update prediction text
+                document.getElementById('predictionResult').textContent = data.prediction || "HAM";
+                document.getElementById('predictionResult').className = 
+                    `prediction ${isSpam ? 'spam-prediction' : 'ham-prediction'}`;
+                
+                // Update probability bar
+                const fillWidth = isSpam ? probability * 100 : (1 - probability) * 100;
+                const fillElement = document.getElementById('probabilityFill');
+                fillElement.style.width = `${fillWidth}%`;
+                fillElement.className = `probability-fill ${isSpam ? 'spam-fill' : 'ham-fill'}`;
+                
+                // Update probability text
+                document.getElementById('probabilityText').textContent = 
+                    `${(fillWidth).toFixed(1)}% ${isSpam ? 'SPAM' : 'HAM'}`;
+                
+                // Update other details
+                document.getElementById('analyzedText').textContent = data.text || textInput.substring(0, 100);
+                document.getElementById('processingTime').textContent = data.latency || "0.0";
+                
+                // Show results with appropriate styling
+                resultSection.className = `result-section ${isSpam ? 'spam-result' : 'ham-result'}`;
+                resultSection.style.display = 'block';
+                
+                // Log success
+                console.log("🎉 Prediction successful:", data.prediction);
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                
+                // Show demo result
+                const isSpamDemo = textInput.toLowerCase().includes('win') || 
+                                textInput.toLowerCase().includes('free') || 
+                                textInput.toLowerCase().includes('click');
+                const demoPrediction = isSpamDemo ? "SPAM" : "HAM";
+                const demoProbability = isSpamDemo ? 0.85 : 0.15;
+                
+                document.getElementById('predictionResult').textContent = demoPrediction + " (Demo)";
+                document.getElementById('predictionResult').className = 
+                    `prediction ${isSpamDemo ? 'spam-prediction' : 'ham-prediction'}`;
+                
+                const fillElement = document.getElementById('probabilityFill');
+                fillElement.style.width = `${demoProbability * 100}%`;
+                fillElement.className = `probability-fill ${isSpamDemo ? 'spam-fill' : 'ham-fill'}`;
+                
+                document.getElementById('probabilityText').textContent = 
+                    `${(demoProbability * 100).toFixed(1)}% ${demoPrediction}`;
+                
+                document.getElementById('analyzedText').textContent = textInput.substring(0, 100) + "...";
+                document.getElementById('processingTime').textContent = "0.1";
+                
+                resultSection.className = `result-section ${isSpamDemo ? 'spam-result' : 'ham-result'}`;
+                resultSection.style.display = 'block';
+                
+                alert('Demo mode: Model may not be loaded. Showing demo prediction.');
+            } finally {
+                // Hide loader, enable button
+                predictBtn.disabled = false;
+                predictBtn.textContent = 'Check for Spam';
+                loader.style.display = 'none';
+            }
+        }
+        
+        function loadExample(text) {
+            document.getElementById('textInput').value = text;
+        }
+        
+        // Allow pressing Enter to predict (with Ctrl key)
+        document.getElementById('textInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                predictSpam();
+            }
+        });
+        
+        // Quick test button for debugging
+        function testPrediction() {
+            loadExample('Congrats! You won a $1000 Walmart gift card. Click here to claim: http://bit.ly/win1000');
+            predictSpam();
+        }
+        
+        // Add test button to page (optional)
+        window.addEventListener('DOMContentLoaded', function() {
+            const testBtn = document.createElement('button');
+            testBtn.textContent = 'Test Spam Example';
+            testBtn.style.marginLeft = '10px';
+            testBtn.style.padding = '10px 15px';
+            testBtn.style.background = '#6c757d';
+            testBtn.style.color = 'white';
+            testBtn.style.border = 'none';
+            testBtn.style.borderRadius = '5px';
+            testBtn.style.cursor = 'pointer';
+            testBtn.onclick = testPrediction;
+            
+            const container = document.querySelector('.input-section');
+            container.appendChild(testBtn);
+        });
+    </script>
+</body>
+</html>

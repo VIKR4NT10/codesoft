@@ -47,3 +47,6 @@ class MongoDBClient:
         if not collection_name:
             raise ValueError("Collection name must be provided")
         return self.database[collection_name]
+    def close(self):
+        self.client.close()
+        logging.info("MongoDB connection closed")

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Model Classifier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+        
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .model-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+        
+        .model-card:hover {
+            transform: translateY(-10px);
+            border-color: #667eea;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+        
+        .model-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .model-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .model-desc {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .status {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f0f8ff;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            color: #999;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .models-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Multi-Model Classifier</h1>
+        <p class="subtitle">Choose a model to analyze your text</p>
+        
+        <div class="models-grid">
+            <!-- Movie Genre Classifier -->
+            <div class="model-card" onclick="window.location.href='/movie_genre'">
+                <div class="model-icon">🎬</div>
+                <h2 class="model-title">Movie Genre Classifier</h2>
+                <p class="model-desc">
+                    Classify movies into genres based on their plot descriptions.
+                    Uses Linear SVM with TF-IDF features.
+                </p>
+                <a href="/movie_genre" class="btn">Try It Now</a>
+            </div>
+            
+            <!-- Spam SMS Classifier -->
+            <div class="model-card" onclick="window.location.href='/spam_sms'">
+                <div class="model-icon">📱</div>
+                <h2 class="model-title">Spam SMS Classifier</h2>
+                <p class="model-desc">
+                    Detect spam messages in SMS texts.
+                    Uses CNN with word embeddings for classification.
+                </p>
+                <a href="/spam_sms" class="btn">Try It Now</a>
+            </div>
+        </div>
+        
+        <div class="status">
+            <p><strong>System Status:</strong> All models loaded and ready</p>
+            <p><small>Powered by Flask, MLflow & Prometheus</small></p>
+        </div>
+        
+        <div class="footer">
+            <p>Learning Project | MLflow Tracking Enabled | Prometheus Metrics at <code>/metrics</code></p>
+        </div>
+    </div>
+    
+    <script>
+        // Check health status
+        fetch('/health')
+            .then(response => response.json())
+            .then(data => {
+                if (data.models_loaded) {
+                    document.querySelector('.status p').innerHTML = 
+                        `<strong>System Status:</strong> ${data.models_available.length} models loaded`;
+                }
+            })
+            .catch(console.error);
+    </script>
+</body>
+</html>

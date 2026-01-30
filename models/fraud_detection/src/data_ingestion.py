@@ -88,7 +88,7 @@ def ingest_monthly_data(
     """
 
     config = load_config(config_path)
-    MODEL_NAME = "credit_card_fraud"
+    MODEL_NAME = "fraud_detection"
     model_cfg = config["models"][MODEL_NAME]
 
     raw_dir = Path("data/fraud_detection/raw")

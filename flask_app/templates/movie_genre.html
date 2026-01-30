@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Genre Classifier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 2rem;
+        }
+        
+        .back-btn {
+            text-decoration: none;
+            color: #667eea;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 2px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 200px;
+            transition: border-color 0.3s ease;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .result-section {
+            margin-top: 40px;
+            padding: 30px;
+            border-radius: 15px;
+            background: #f8f9fa;
+            display: none;
+        }
+        
+        .result-title {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .prediction {
+            font-size: 1.5rem;
+            color: #667eea;
+            font-weight: bold;
+            padding: 10px 20px;
+            background: white;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .details {
+            margin-top: 20px;
+            color: #666;
+        }
+        
+        .loader {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .example-text {
+            margin-top: 20px;
+            color: #999;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Movie Genre Classifier</h1>
+            <a href="/" class="back-btn">← Back to Home</a>
+        </div>
+        
+        <p>Enter a movie plot description to predict its genre</p>
+        
+        <div class="input-section">
+            <textarea id="textInput" placeholder="Enter movie plot description here... 
+Example: A young wizard discovers his magical heritage and attends a school for wizards, where he makes friends and battles dark forces..."></textarea>
+            
+            <button class="btn" onclick="predictGenre()" id="predictBtn">Predict Genre</button>
+            
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <p>Analyzing plot...</p>
+            </div>
+        </div>
+        
+        <div class="result-section" id="resultSection">
+            <h2 class="result-title">🎯 Prediction Result</h2>
+            <div class="prediction" id="predictionResult">Action</div>
+            
+            <div class="details">
+                <p><strong>Analyzed Text:</strong> <span id="analyzedText"></span></p>
+                <p><strong>Processing Time:</strong> <span id="processingTime"></span> seconds</p>
+            </div>
+        </div>
+        
+        <div class="example-text">
+            <p><strong>Tip:</strong> Try different plot descriptions like sci-fi, romance, horror, or comedy themes.</p>
+        </div>
+    </div>
+    
+    <script>
+        async function predictGenre() {
+            const textInput = document.getElementById('textInput').value.trim();
+            const predictBtn = document.getElementById('predictBtn');
+            const loader = document.getElementById('loader');
+            const resultSection = document.getElementById('resultSection');
+            
+            console.log("📝 Text input:", textInput);
+            
+            if (!textInput) {
+                alert('Please enter some text to analyze.');
+                return;
+            }
+            
+            // Show loader, disable button
+            predictBtn.disabled = true;
+            predictBtn.textContent = 'Analyzing...';
+            loader.style.display = 'block';
+            resultSection.style.display = 'none';
+            
+            try {
+                const formData = new FormData();
+                formData.append('text', textInput);
+                
+                console.log("🚀 Sending request to /predict/movie_genre");
+                
+                const response = await fetch('/predict/movie_genre', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log("✅ Response received, status:", response.status);
+                
+                const data = await response.json();
+                console.log("📊 Response data:", data);
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                if (data.error && !data.prediction) {
+                    throw new Error(data.error);
+                }
+                
+                // Update UI with results
+                document.getElementById('predictionResult').textContent = data.prediction || "Unknown";
+                document.getElementById('analyzedText').textContent = data.text || textInput.substring(0, 100);
+                document.getElementById('processingTime').textContent = data.latency || "0.0";
+                
+                // Show results
+                resultSection.style.display = 'block';
+                
+                // Log success
+                console.log("🎉 Prediction successful:", data.prediction);
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                
+                // Show demo/error result
+                document.getElementById('predictionResult').textContent = "Action (Demo)";
+                document.getElementById('analyzedText').textContent = textInput.substring(0, 100) + "...";
+                document.getElementById('processingTime').textContent = "0.1";
+                resultSection.style.display = 'block';
+                
+                alert('Demo mode: Model may not be loaded. Showing demo prediction.');
+            } finally {
+                // Hide loader, enable button
+                predictBtn.disabled = false;
+                predictBtn.textContent = 'Predict Genre';
+                loader.style.display = 'none';
+            }
+        }
+        
+        // Allow pressing Enter to predict (with Ctrl key)
+        document.getElementById('textInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                predictGenre();
+            }
+        });
+        
+        // Quick test button for debugging
+        function testPrediction() {
+            document.getElementById('textInput').value = "A young wizard discovers his magical heritage and attends a school for wizards, where he makes friends and battles dark forces.";
+            predictGenre();
+        }
+        
+        // Add test button to page (optional)
+        window.addEventListener('DOMContentLoaded', function() {
+            const testBtn = document.createElement('button');
+            testBtn.textContent = 'Test with Example';
+            testBtn.style.marginLeft = '10px';
+            testBtn.style.padding = '10px 15px';
+            testBtn.style.background = '#6c757d';
+            testBtn.style.color = 'white';
+            testBtn.style.border = 'none';
+            testBtn.style.borderRadius = '5px';
+            testBtn.style.cursor = 'pointer';
+            testBtn.onclick = testPrediction;
+            
+            const container = document.querySelector('.input-section');
+            container.appendChild(testBtn);
+        });
+    </script>
+</body>
+</html>

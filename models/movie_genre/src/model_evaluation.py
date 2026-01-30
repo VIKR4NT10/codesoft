@@ -8,37 +8,24 @@ import mlflow.sklearn
 import dagshub
 
 from sklearn.metrics import (
-     accuracy_score, precision_score, recall_score, f1_score, classification_report)
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    classification_report,
+)
 
 from logger import logging
 
-
 # =============================================================================
-# MLflow + DagsHub setup (production)
+# MLflow + DagsHub setup
 # =============================================================================
-# dagshub_token = os.getenv("CAPSTONE_TEST")
-# if not dagshub_token:   
-#     raise EnvironmentError("CAPSTONE_TEST environment variable is not set")
-
-# os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
-# os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
-
-# dagshub_url = "https://dagshub.com"
-# repo_owner = "VIKR4NT"
-# repo_name = "codesoft"
-
-# mlflow.set_tracking_uri(f"{dagshub_url}/{repo_owner}/{repo_name}.mlflow")
-# dagshub.init(repo_owner=repo_owner, repo_name=repo_name, mlflow=True)
+mlflow.set_tracking_uri("https://dagshub.com/VIKR4NT10/codesoft.mlflow")
+dagshub.init(repo_owner="VIKR4NT10", repo_name="codesoft", mlflow=True)
 # =============================================================================
-# Below code block is for local use
-# -------------------------------------------------------------------------------------
-mlflow.set_tracking_uri('https://dagshub.com/VIKR4NT10/codesoft.mlflow')
-dagshub.init(repo_owner='VIKR4NT10', repo_name='codesoft', mlflow=True)
-# -------------------------------------------------------------------------------------
 
 
 def load_model(path: str):
-    """Load trained model."""
     with open(path, "rb") as f:
         model = pickle.load(f)
     logging.info("Model loaded from %s", path)
@@ -46,16 +33,12 @@ def load_model(path: str):
 
 
 def load_data(path: str) -> pd.DataFrame:
-    """Load test feature data."""
     df = pd.read_csv(path)
     logging.info("Test data loaded from %s", path)
     return df
 
 
-def evaluate_model(model, X_test: np.ndarray, y_test: np.ndarray) -> dict:
-    """
-    Evaluate multi-class SVM model
-    """
+def evaluate_model(model, X_test: np.ndarray, y_test: np.ndarray):
     logging.info("Evaluating SVM model")
 
     y_pred = model.predict(X_test)
@@ -70,7 +53,6 @@ def evaluate_model(model, X_test: np.ndarray, y_test: np.ndarray) -> dict:
         "f1_weighted": f1_score(y_test, y_pred, average="weighted"),
     }
 
-    logging.info("Evaluation metrics computed")
     return metrics, classification_report(y_test, y_pred)
 
 
@@ -85,65 +67,73 @@ def main():
     mlflow.set_experiment("movie-genre-svm")
 
     with mlflow.start_run() as run:
-        try:
-            # Load artifacts
-            model_path = os.path.join(
-                "artifacts", "movie_genre", "model.pkl"
-            )
-            test_path = os.path.join(
-                "data", "movie_genre", "features", "test_tfidf.csv"
-            )
+        # --------------------------------------------------
+        # Paths
+        # --------------------------------------------------
+        model_path = "artifacts/movie_genre/model.pkl"
+        test_path = "data/movie_genre/features/test_tfidf.csv"
+        reports_dir = "reports/movie_genre"
 
-            model = load_model(model_path)
-            test_df = load_data(test_path)
+        # --------------------------------------------------
+        # Load
+        # --------------------------------------------------
+        model = load_model(model_path)
+        test_df = load_data(test_path)
 
-            X_test = test_df.iloc[:, :-1].values
-            y_test = test_df.iloc[:, -1].values
+        # 🔒 SAFE FEATURE / LABEL SPLIT
+        if "label" not in test_df.columns:
+            raise ValueError("Expected column 'label' not found in test data")
 
-            # Evaluate
-            metrics, clf_report = evaluate_model(model, X_test, y_test)
+        X_test = test_df.drop(columns=["label"]).values
+        y_test = test_df["label"].values
 
-            # Save metrics locally
-            reports_dir = os.path.join("reports", "movie_genre")
-            save_json(metrics, os.path.join(reports_dir, "metrics.json"))
+        # --------------------------------------------------
+        # Evaluate
+        # --------------------------------------------------
+        metrics, clf_report = evaluate_model(model, X_test, y_test)
 
-            with open(os.path.join(reports_dir, "classification_report.txt"), "w") as f:
-                f.write(clf_report)
+        # --------------------------------------------------
+        # Save reports locally
+        # --------------------------------------------------
+        save_json(metrics, os.path.join(reports_dir, "metrics.json"))
 
-            # Log metrics to MLflow
-            for k, v in metrics.items():
-                mlflow.log_metric(k, v)
+        with open(os.path.join(reports_dir, "classification_report.txt"), "w") as f:
+            f.write(clf_report)
 
-            # Log model params
-            if hasattr(model, "get_params"):
-                for k, v in model.get_params().items():
-                    mlflow.log_param(k, v)
+        # --------------------------------------------------
+        # Log to MLflow
+        # --------------------------------------------------
+        for k, v in metrics.items():
+            mlflow.log_metric(k, v)
 
-            # Log model artifact
-            mlflow.sklearn.log_model(model, "svm_model")
+        if hasattr(model, "get_params"):
+            mlflow.log_params(model.get_params())
 
-            # Save run info
-            run_info = {
+        MODEL_ARTIFACT_PATH = "model"
+
+        mlflow.sklearn.log_model(
+            sk_model=model,
+            artifact_path=MODEL_ARTIFACT_PATH
+        )
+
+        # --------------------------------------------------
+        # Save run metadata for registry step
+        # --------------------------------------------------
+        run_info = {
             "run_id": run.info.run_id,
-            "experiment": "movie-genre",
-            "model_type": "svm",
-            "model_artifact_path": "artifacts/movie_genre/model.pkl"
-            }
+            "experiment": "movie-genre-svm",
+            "model_name": "movie_genre_svm",
+            "model_path": MODEL_ARTIFACT_PATH,
+            "promotion_metric": "f1_macro",
+        }
 
-            save_json(
-                run_info,
-                os.path.join(reports_dir, "experiment_info.json")
-            )
+        save_json(run_info, os.path.join(reports_dir, "experiment_info.json"))
 
-            # Log artifacts
-            mlflow.log_artifact(os.path.join(reports_dir, "metrics.json"))
-            mlflow.log_artifact(os.path.join(reports_dir, "classification_report.txt"))
+        mlflow.log_artifact(os.path.join(reports_dir, "metrics.json"))
+        mlflow.log_artifact(os.path.join(reports_dir, "classification_report.txt"))
+        mlflow.log_artifact(os.path.join(reports_dir, "experiment_info.json"))
 
-            logging.info("Model evaluation completed successfully")
-
-        except Exception as e:
-            logging.error("Model evaluation failed: %s", e)
-            raise
+        logging.info("Model evaluation completed successfully")
 
 
 if __name__ == "__main__":
