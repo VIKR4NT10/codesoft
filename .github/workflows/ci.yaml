@@ -32,21 +32,21 @@ jobs:
 
       - name: run pipeline
         env:
-          CAPSTONE_TEST: ${{ secrets.CODESOFT }}
+          CODESOFT: ${{ secrets.CODESOFT }}
           MONGODB_URL: ${{ secrets.MONGODB_URL }}
         run: |
           dvc repro
 
       - name: Run model tests
         env:
-          CAPSTONE_TEST: ${{ secrets.CODESOFT }}
+          CODESOFT: ${{ secrets.CODESOFT }}
         run: |
           python -m unittest tests/test_model.py
 
       - name: Run Flask app tests
         if: success()
         env:
-          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+          CODESOFT: ${{ secrets.CAPSTONE_TEST }}
         run: python -m unittest tests/test_flask_app.py
 
       # - name: Login to AWS ECR
