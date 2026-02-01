@@ -81,11 +81,11 @@ preprocessor = TextPreprocessor()
 def setup_mlflow():
     dagshub_token = os.getenv("CODESOFT")
     if dagshub_token:
-        os.environ["DAGSHUB_TOKEN"] = dagshub_token
+        os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+        os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
 
-    mlflow.set_tracking_uri(
-        "https://dagshub.com/VIKR4NT10/capstone-project.mlflow"
-    )
+    mlflow.set_tracking_uri("https://dagshub.com/VIKR4NT10/capstone-project.mlflow" )
+    
     # mlflow.set_tracking_uri("https://dagshub.com/VIKR4NT10/codesoft.mlflow")
     # dagshub.init(repo_owner="VIKR4NT10", repo_name="codesoft", mlflow=True)
 
