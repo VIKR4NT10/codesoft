@@ -33,7 +33,7 @@ jobs:
       - name: run pipeline
         env:
           CAPSTONE_TEST: ${{ secrets.CODESOFT }}
-          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_URL: ${{ secrets.MONGODB_URL }}
         run: |
           dvc repro
 
