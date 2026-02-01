@@ -1,4 +1,4 @@
-import logging
+from logger import logging
 import yaml
 import numpy as np
 from pathlib import Path
@@ -12,8 +12,6 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.text import tokenizer_from_json
 import pandas as pd
-import pickle
-
 logging.basicConfig(level=logging.INFO)
 
 

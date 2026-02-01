@@ -3,65 +3,51 @@
 import json
 from pathlib import Path
 import yaml
-import logging
+from logger import logging
 import tensorflow as tf
+import warnings
 
 import pandas as pd
 import mlflow
+import mlflow.tensorflow
 import dagshub
 
 from sklearn.metrics import (
-    precision_score,
-    recall_score,
-    accuracy_score,
-    f1_score,
-    roc_auc_score,
-    average_precision_score,
-    classification_report,
-)
+    precision_score,  recall_score,  accuracy_score, f1_score, roc_auc_score, average_precision_score,
+    classification_report,)
+import mlflow.pyfunc
 
-from tensorflow.keras.models import load_model as keras_load_model
+warnings.filterwarnings("ignore")
 
 logging.basicConfig(level=logging.INFO)
 
-# ----------------------------
+# =============================================================================
 # MLflow + DagsHub setup
-# ----------------------------
+# =============================================================================
 mlflow.set_tracking_uri("https://dagshub.com/VIKR4NT10/codesoft.mlflow")
 dagshub.init(repo_owner="VIKR4NT10", repo_name="codesoft", mlflow=True)
 
-
-# ----------------------------
-# Load params
-# ----------------------------
+# =============================================================================
+# Helpers
+# =============================================================================
 def load_params(path: str = "params.yaml") -> dict:
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
 
-# ----------------------------
-# Load Keras model
-# ----------------------------
 def load_keras_model(path: Path):
     model = tf.keras.models.load_model(path)
-    logging.info(f"TensorFlow SavedModel loaded from {path}")
+    logging.info("TensorFlow SavedModel loaded from %s", path)
     return model
 
 
-
-# ----------------------------
-# Load test data
-# ----------------------------
 def load_test_data(processed_dir: Path):
     X_test = pd.read_parquet(processed_dir / "X_test_pad.parquet").values
     y_test = pd.read_parquet(processed_dir / "y_test.parquet")["label"].values
-    logging.info(f"Loaded test data: X={X_test.shape}, y={y_test.shape}")
+    logging.info("Loaded test data: X=%s, y=%s", X_test.shape, y_test.shape)
     return X_test, y_test
 
 
-# ----------------------------
-# Evaluate model
-# ----------------------------
 def evaluate_model(model, X, y):
     logging.info("Evaluating SMS spam model")
 
@@ -81,18 +67,38 @@ def evaluate_model(model, X, y):
     return metrics, report
 
 
-# ----------------------------
-# Save JSON helper
-# ----------------------------
 def save_json(data: dict, path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
 
+def load_tokenizer(path: Path):
+    with open(path, "r") as f:
+        return tf.keras.preprocessing.text.tokenizer_from_json(f.read())
 
-# ----------------------------
+class SpamSMSModel(mlflow.pyfunc.PythonModel):
+    def __init__(self, model, tokenizer, max_len: int):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.max_len = max_len
+
+    def predict(self, context, model_input):
+        # model_input: pandas DataFrame with column "text"
+        texts = model_input["text"].astype(str).tolist()
+
+        sequences = self.tokenizer.texts_to_sequences(texts)
+        padded = tf.keras.preprocessing.sequence.pad_sequences(
+            sequences,
+            maxlen=self.max_len,
+            padding="post"
+        )
+
+        probs = self.model.predict(padded, verbose=0).reshape(-1)
+        return probs
+
+# =============================================================================
 # Main
-# ----------------------------
+# =============================================================================
 def main():
     MODEL_NAME = "spam_sms"
     EXPERIMENT_NAME = "spam_sms_cnn"
@@ -100,8 +106,9 @@ def main():
     mlflow.set_experiment(EXPERIMENT_NAME)
 
     with mlflow.start_run() as run:
-        params = load_params()
-
+        # --------------------------------------------------
+        # Paths
+        # --------------------------------------------------
         processed_dir = Path(f"data/{MODEL_NAME}/features")
         artifacts_dir = Path(f"artifacts/{MODEL_NAME}")
         reports_dir = Path(f"reports/{MODEL_NAME}")
@@ -109,56 +116,68 @@ def main():
 
         model_path = artifacts_dir / "model"
 
-        # Load artifacts
+        # --------------------------------------------------
+        # Load model & data
+        # --------------------------------------------------
         model = load_keras_model(model_path)
         X_test, y_test = load_test_data(processed_dir)
 
+        # --------------------------------------------------
         # Evaluate
+        # --------------------------------------------------
         metrics, clf_report = evaluate_model(model, X_test, y_test)
 
+        # --------------------------------------------------
         # Save reports
+        # --------------------------------------------------
         save_json(metrics, reports_dir / "metrics.json")
         with open(reports_dir / "classification_report.txt", "w") as f:
             f.write(clf_report)
 
+        # --------------------------------------------------
         # Log metrics
+        # --------------------------------------------------
         for k, v in metrics.items():
             mlflow.log_metric(k, float(v))
 
-        # Log model
-        # ----------------------------
-        # Save model as SavedModel (Keras 3 compatible)
-        # ----------------------------
-        model_save_path = Path("cnn_model")
+        # --------------------------------------------------
+        # log model properly to MLflow
+        # --------------------------------------------------
+        # Load tokenizer
+        tokenizer = load_tokenizer(artifacts_dir / "tokenizer.json")
 
-        # Remove if exists (important for reruns)
-        if model_save_path.exists():
-            import shutil
-            shutil.rmtree(model_save_path)
+        pyfunc_model = SpamSMSModel(
+            model=model,
+            tokenizer=tokenizer,
+            max_len=100,  # must match training
+        )
 
-        # Export SavedModel directory
-        model.export(model_save_path)
-
-        # Log entire directory as MLflow artifact
-        mlflow.log_artifacts(str(model_save_path), artifact_path="cnn_model")
-
+        mlflow.pyfunc.log_model(
+            artifact_path="model",
+            python_model=pyfunc_model,
+        )
 
 
-        # Save run metadata
-        run_info = {
+        # --------------------------------------------------
+        # Save experiment info for promotion pipeline
+        # --------------------------------------------------
+        experiment_info = {
+            "model_name": MODEL_NAME,
             "run_id": run.info.run_id,
-            "experiment": EXPERIMENT_NAME,
-            "model_type": "cnn",
-            "model_path": "cnn_model",
+            "model_path": "model",
+            "promotion_metric": "f1",
         }
-        save_json(run_info, reports_dir / "experiment_info.json")
 
+        save_json(experiment_info, reports_dir / "experiment_info.json")
+
+        # --------------------------------------------------
         # Log artifacts
+        # --------------------------------------------------
         mlflow.log_artifact(str(reports_dir / "metrics.json"))
         mlflow.log_artifact(str(reports_dir / "classification_report.txt"))
         mlflow.log_artifact(str(reports_dir / "experiment_info.json"))
 
-        logging.info("Model evaluation completed successfully")
+        logging.info("Spam SMS model evaluation completed successfully")
 
 
 if __name__ == "__main__":

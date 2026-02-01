@@ -16,3 +16,5 @@ with mlflow.start_run():
   
   connection string - mongodb+srv://vikrantschavan3_db_user:phcRoZI9ImCPXxin@cluster0.d0dk86t.mongodb.net/?appName=Cluster0
   $env:MONGODB_URL = "mongodb+srv://vikrantschavan3_db_user:phcRoZI9ImCPXxin@cluster0.d0dk86t.mongodb.net/?appName=Cluster0"
+
+  dagshub token: 1f2c31123d0af67ab26e20723da2a3ea7bbca0ab

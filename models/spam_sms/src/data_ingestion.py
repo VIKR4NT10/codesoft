@@ -1,5 +1,4 @@
 import yaml
-import logging
 import pandas as pd
 from logger import logging
 from connections.mongo_connection import MongoDBClient

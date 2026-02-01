@@ -8,8 +8,10 @@ from nltk.stem import WordNetLemmatizer
 from logger import logging
 
 # Download required resources (safe to call multiple times)
-nltk.download("stopwords")
-nltk.download("wordnet")
+
+nltk.download("stopwords", quiet=True)
+nltk.download("wordnet", quiet=True)
+nltk.download("omw-1.4", quiet=True)
 
 
 def clean_text(text: str, stop_words, lemmatizer) -> str:

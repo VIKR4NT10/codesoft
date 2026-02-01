@@ -1,7 +1,7 @@
 # register_model.py
-
+import os
 import json
-import logging
+from logger import logging
 import warnings
 
 import mlflow
@@ -11,11 +11,30 @@ from mlflow.tracking import MlflowClient
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO)
 
-# ----------------------------
+# =============================================================================
 # MLflow + DagsHub setup
-# ----------------------------
-mlflow.set_tracking_uri("https://dagshub.com/VIKR4NT10/codesoft.mlflow")
-dagshub.init(repo_owner="VIKR4NT10", repo_name="codesoft", mlflow=True)
+# =============================================================================
+# mlflow.set_tracking_uri("https://dagshub.com/VIKR4NT10/codesoft.mlflow")
+# dagshub.init(repo_owner="VIKR4NT10", repo_name="codesoft", mlflow=True)
+
+
+# Below code block is for production use
+# -------------------------------------------------------------------------------------
+# Set up DagsHub credentials for MLflow tracking
+dagshub_token = os.getenv("CODESOFT")
+if not dagshub_token:
+    raise EnvironmentError("CAPSTONE environment variable is not set")
+
+os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+
+dagshub_url = "https://dagshub.com"
+repo_owner = "VIKR4NT10"
+repo_name = "codesoft"
+
+# Set up MLflow tracking URI
+mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
+# -------------------------------------------------------------------------------------
 
 PROMOTION_DELTA = 0.01  # minimum F1 improvement
 
