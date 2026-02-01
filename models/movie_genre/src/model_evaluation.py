@@ -83,6 +83,7 @@ def evaluate_model(model, X, y) -> dict:
 
 
 def save_json(data: dict, path: str):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
     logging.info("Saved file to %s", path)
@@ -148,13 +149,11 @@ def main():
                 "model_path": "model",
                 "promotion_metric": "f1_macro"
             }
-
             save_json(
                 experiment_info,
                 "reports/movie_genre/experiment_info.json",
             )
 
-            # Optional: log reports
             mlflow.log_artifact("reports/movie_genre/experiment_info.json")
 
             logging.info("Model evaluation and logging completed successfully")
