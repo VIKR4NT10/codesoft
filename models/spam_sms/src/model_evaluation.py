@@ -35,8 +35,7 @@ dagshub_token = os.getenv("CODESOFT")
 if not dagshub_token:
     raise EnvironmentError("CODESOFT environment variable is not set")
 
-os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
-os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+os.environ["DAGSHUB_TOKEN"] = dagshub_token
 
 dagshub_url = "https://dagshub.com"
 repo_owner = "VIKR4NT10"
