@@ -21,37 +21,31 @@ class FlaskAppTests(unittest.TestCase):
     # --------------------------------------------------
     def test_spam_sms_prediction(self):
         response = self.client.post(
-            "/predict/spam-sms",
+            "/predict/spam_sms",
             data=dict(text="Congratulations! You have won a free prize"),
-            follow_redirects=True
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(
-            b"Spam" in response.data or b"Ham" in response.data,
-            "Response should contain either 'Spam' or 'Ham'"
-        )
+
+        data = response.get_json()
+        self.assertIn(data["prediction"], ["SPAM", "HAM"])
+
 
     # --------------------------------------------------
     # Movie genre prediction
     # --------------------------------------------------
     def test_movie_genre_prediction(self):
         response = self.client.post(
-            "/predict/movie-genre",
+            "/predict/movie_genre",
             data=dict(
                 text="A young wizard discovers his magical powers and attends a school of magic"
             ),
-            follow_redirects=True
         )
 
         self.assertEqual(response.status_code, 200)
 
-        # We don't hardcode genres, just ensure something sensible is returned
-        self.assertTrue(
-            b"Genre" in response.data or b"Predicted" in response.data,
-            "Response should contain a predicted genre"
-        )
-
+        data = response.get_json()
+        self.assertTrue(len(data["prediction"]) > 0)
 
 if __name__ == "__main__":
     unittest.main()
