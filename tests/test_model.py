@@ -5,7 +5,6 @@ import pickle
 import pandas as pd
 import numpy as np
 from sklearn.metrics import accuracy_score, f1_score
-import tensorflow as tf
 
 
 class TestProductionModels(unittest.TestCase):
@@ -13,48 +12,50 @@ class TestProductionModels(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # --------------------------------------------------
-        # MLflow + DagsHub auth
+        # MLflow + DagsHub authentication
         # --------------------------------------------------
         dagshub_token = os.getenv("CODESOFT")
         if not dagshub_token:
-            raise EnvironmentError("CAPSTONE environment variable is not set")
+            raise EnvironmentError("CODESOFT environment variable is not set")
 
         os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
         os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
 
         dagshub_url = "https://dagshub.com"
         repo_owner = "VIKR4NT10"
-        repo_name = "codesoft"
+        repo_name = "capstone-project"
 
-        # Set up MLflow tracking URI
-        mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
+        mlflow.set_tracking_uri(
+            f"{dagshub_url}/{repo_owner}/{repo_name}.mlflow"
+        )
+
         cls.client = mlflow.MlflowClient()
 
         # --------------------------------------------------
-        # Load PRODUCTION models
+        # Load PRODUCTION models (pyfunc – same as Flask app)
         # --------------------------------------------------
         cls.movie_model_uri = "models:/movie_genre_svm/Production"
-        cls.spam_model_uri = "models:/spam_sms/Production"
+        cls.spam_model_uri = "models:/spam_sms_cnn/Production"
 
-        cls.movie_model = mlflow.sklearn.load_model(cls.movie_model_uri)
-        cls.spam_model = mlflow.tensorflow.load_model(cls.spam_model_uri)
+        cls.movie_model = mlflow.pyfunc.load_model(cls.movie_model_uri)
+        cls.spam_model = mlflow.pyfunc.load_model(cls.spam_model_uri)
 
         # --------------------------------------------------
-        # Load preprocessing artifacts from MLflow
+        # Load preprocessing artifacts
         # --------------------------------------------------
         cls.movie_vectorizer = cls._load_artifact(
             "movie_genre_svm", "vectorizer.pkl"
         )
 
         cls.spam_tokenizer = cls._load_artifact(
-            "spam_sms", "tokenizer.pkl"
+            "spam_sms_cnn", "tokenizer.pkl"
         )
 
         # --------------------------------------------------
-        # Load holdout data
+        # Load holdout test data
         # --------------------------------------------------
         cls.movie_test = pd.read_csv(
-            "data/movie_genre/features/test_tfidf.csv"
+            "data/movie_genre/features/test.csv"
         )
 
         cls.spam_X = pd.read_parquet(
@@ -66,16 +67,21 @@ class TestProductionModels(unittest.TestCase):
         )["label"].values
 
     # --------------------------------------------------
-    # Helpers
+    # Helper to load MLflow artifacts
     # --------------------------------------------------
     @classmethod
     def _load_artifact(cls, model_name, artifact_name):
         versions = cls.client.get_latest_versions(
             model_name, stages=["Production"]
         )
+
+        if not versions:
+            raise RuntimeError(f"No Production version found for {model_name}")
+
         run_id = versions[0].run_id
-        path = cls.client.download_artifacts(run_id, artifact_name)
-        with open(path, "rb") as f:
+        artifact_path = cls.client.download_artifacts(run_id, artifact_name)
+
+        with open(artifact_path, "rb") as f:
             return pickle.load(f)
 
     # --------------------------------------------------
@@ -90,42 +96,44 @@ class TestProductionModels(unittest.TestCase):
         self.assertIsNotNone(self.spam_tokenizer)
 
     # --------------------------------------------------
-    # Signature tests
+    # Signature / interface tests (mirror Flask app)
     # --------------------------------------------------
     def test_movie_genre_signature(self):
-        text = ["A detective investigates a mysterious murder"]
-        X = self.movie_vectorizer.transform(text)
+        df = pd.DataFrame(
+            {"text": ["A detective investigates a mysterious murder"]}
+        )
 
-        preds = self.movie_model.predict(X)
-
+        preds = self.movie_model.predict(df)
         self.assertEqual(len(preds), 1)
 
     def test_spam_sms_signature(self):
-        text = ["Congratulations! You won a free prize"]
-        seq = self.spam_tokenizer.texts_to_sequences(text)
-        pad = tf.keras.preprocessing.sequence.pad_sequences(
-            seq, maxlen=self.spam_X.shape[1]
+        df = pd.DataFrame(
+            {"text": ["Congratulations! You won a free prize"]}
         )
 
-        preds = self.spam_model.predict(pad)
-        self.assertEqual(preds.shape[0], 1)
+        preds = self.spam_model.predict(df)
+        self.assertEqual(len(preds), 1)
 
     # --------------------------------------------------
-    # Performance tests
+    # Performance regression tests
     # --------------------------------------------------
     def test_movie_genre_performance(self):
-        X = self.movie_test.iloc[:, :-1].values
-        y = self.movie_test.iloc[:, -1].values
+        df = self.movie_test[["text"]]
+        y_true = self.movie_test["label"]
 
-        preds = self.movie_model.predict(X)
-        f1 = f1_score(y, preds, average="macro")
+        preds = self.movie_model.predict(df)
+        f1 = f1_score(y_true, preds, average="macro")
 
         self.assertGreaterEqual(
-            f1, 0.40, "Movie genre F1_macro below threshold"
+            f1, 0.40,
+            "Movie genre macro-F1 below acceptable threshold"
         )
 
     def test_spam_sms_performance(self):
-        probs = self.spam_model.predict(self.spam_X).reshape(-1)
+        probs = self.spam_model.predict(
+            pd.DataFrame({"text": self.spam_X.flatten()})
+        ).astype(float)
+
         preds = (probs >= 0.7).astype(int)
 
         acc = accuracy_score(self.spam_y, preds)
