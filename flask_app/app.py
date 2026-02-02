@@ -114,6 +114,7 @@ class ModelManager:
         spam_uri = get_production_model_uri("spam_sms_cnn")
         self.models["spam_sms"] = mlflow.pyfunc.load_model(spam_uri)
 
+
         self.loaded = True
         print("✓ All Production models loaded")
 
