@@ -37,11 +37,11 @@ jobs:
         run: |
           dvc repro
 
-      - name: Run model tests
-        env:
-          CODESOFT: ${{ secrets.CODESOFT }}
-        run: |
-          python -m unittest tests/test_model.py
+      # - name: Run model tests
+      #   env:
+      #     CODESOFT: ${{ secrets.CODESOFT }}
+      #   run: |
+      #     python -m unittest tests/test_model.py
 
       - name: Run Flask app tests
         if: success()

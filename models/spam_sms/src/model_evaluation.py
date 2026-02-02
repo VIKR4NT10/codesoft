@@ -87,6 +87,7 @@ def evaluate_model(model, X, y):
 
 
 def save_json(data: dict, path: Path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
