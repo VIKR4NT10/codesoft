@@ -3,34 +3,32 @@
 import json
 from pathlib import Path
 import yaml
-from logger import logging
-import tensorflow as tf
-import warnings
 import os
+import warnings
 import pandas as pd
+import tensorflow as tf
 import mlflow
 import mlflow.tensorflow
 import dagshub
 
 from sklearn.metrics import (
-    precision_score,  recall_score,  accuracy_score, f1_score, roc_auc_score, average_precision_score,
-    classification_report,)
-import mlflow.pyfunc
+    precision_score,
+    recall_score,
+    accuracy_score,
+    f1_score,
+    roc_auc_score,
+    average_precision_score,
+    classification_report,
+)
+
+from logger import logging
 
 warnings.filterwarnings("ignore")
-
 logging.basicConfig(level=logging.INFO)
 
 # =============================================================================
 # MLflow + DagsHub setup
 # =============================================================================
-# mlflow.set_tracking_uri("https://dagshub.com/VIKR4NT10/codesoft.mlflow")
-# dagshub.init(repo_owner="VIKR4NT10", repo_name="codesoft", mlflow=True)
-
-
-# Below code block is for production use
-# -------------------------------------------------------------------------------------
-# Set up DagsHub credentials for MLflow tracking
 dagshub_token = os.getenv("CODESOFT")
 if not dagshub_token:
     raise EnvironmentError("CODESOFT environment variable is not set")
@@ -42,9 +40,7 @@ dagshub_url = "https://dagshub.com"
 repo_owner = "VIKR4NT10"
 repo_name = "codesoft"
 
-# Set up MLflow tracking URI
-mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
-# -------------------------------------------------------------------------------------
+mlflow.set_tracking_uri(f"{dagshub_url}/{repo_owner}/{repo_name}.mlflow")
 
 # =============================================================================
 # Helpers
@@ -87,34 +83,9 @@ def evaluate_model(model, X, y):
 
 
 def save_json(data: dict, path: Path):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
-
-def load_tokenizer(path: Path):
-    with open(path, "r") as f:
-        return tf.keras.preprocessing.text.tokenizer_from_json(f.read())
-
-class SpamSMSModel(mlflow.pyfunc.PythonModel):
-    def __init__(self, model, tokenizer, max_len: int):
-        self.model = model
-        self.tokenizer = tokenizer
-        self.max_len = max_len
-
-    def predict(self, context, model_input):
-        # model_input: pandas DataFrame with column "text"
-        texts = model_input["text"].astype(str).tolist()
-
-        sequences = self.tokenizer.texts_to_sequences(texts)
-        padded = tf.keras.preprocessing.sequence.pad_sequences(
-            sequences,
-            maxlen=self.max_len,
-            padding="post"
-        )
-
-        probs = self.model.predict(padded, verbose=0).reshape(-1)
-        return probs
 
 # =============================================================================
 # Main
@@ -135,6 +106,7 @@ def main():
         reports_dir.mkdir(parents=True, exist_ok=True)
 
         model_path = artifacts_dir / "model"
+        tokenizer_path = artifacts_dir / "tokenizer.json"
 
         # --------------------------------------------------
         # Load model & data
@@ -161,25 +133,20 @@ def main():
             mlflow.log_metric(k, float(v))
 
         # --------------------------------------------------
-        # log model properly to MLflow
+        # Log TensorFlow model (CORRECT WAY)
         # --------------------------------------------------
-        # Load tokenizer
-        tokenizer = load_tokenizer(artifacts_dir / "tokenizer.json")
-
-        pyfunc_model = SpamSMSModel(
+        mlflow.tensorflow.log_model(
             model=model,
-            tokenizer=tokenizer,
-            max_len=100,  # must match training
-        )
-
-        mlflow.pyfunc.log_model(
             artifact_path="model",
-            python_model=pyfunc_model,
         )
-
 
         # --------------------------------------------------
-        # Save experiment info for promotion pipeline
+        # Log tokenizer as artifact
+        # --------------------------------------------------
+        mlflow.log_artifact(str(tokenizer_path), artifact_path="model")
+
+        # --------------------------------------------------
+        # Save experiment info
         # --------------------------------------------------
         experiment_info = {
             "model_name": MODEL_NAME,

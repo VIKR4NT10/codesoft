@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import mlflow
 from mlflow.tracking import MlflowClient
 import os
+import tensorflow as tf
 import pandas as pd
 import time
 import re
@@ -102,7 +103,7 @@ class ModelManager:
     def __init__(self):
         self.models = {}
         self.loaded = False
-
+        self.tokenizers = {}
     def load_models(self):
         print("Loading models from MLflow Registry (Production)...")
 
@@ -112,7 +113,16 @@ class ModelManager:
 
         # ---------- Spam SMS ----------
         spam_uri = get_production_model_uri("spam_sms_cnn")
-        self.models["spam_sms"] = mlflow.pyfunc.load_model(spam_uri)
+        self.models["spam_sms"] = mlflow.tensorflow.load_model(spam_uri)
+
+        
+        tokenizer_path = mlflow.artifacts.download_artifacts(
+        artifact_uri=f"{spam_uri}/tokenizer.json"
+        )
+        
+        with open(tokenizer_path, "r") as f:
+            self.tokenizers["spam_sms"] = tf.keras.preprocessing.text.tokenizer_from_json(f.read()
+            )
 
 
         self.loaded = True
@@ -125,10 +135,24 @@ class ModelManager:
 
     def predict_spam_sms(self, text):
         cleaned = preprocessor.clean_text(text, for_spam=True)
-        df = pd.DataFrame({"text": [cleaned]})
-        prob = float(self.models["spam_sms"].predict(df)[0])
+
+        tokenizer = self.tokenizers["spam_sms"]
+        model = self.models["spam_sms"]
+
+        # text → sequence
+        seq = tokenizer.texts_to_sequences([cleaned])
+        padded = tf.keras.preprocessing.sequence.pad_sequences(
+            seq,
+            maxlen=100,     
+            padding="post"
+        )
+
+        # predict
+        prob = float(model.predict(padded, verbose=0)[0][0])
+
         label = "SPAM" if prob > 0.5 else "HAM"
         return label, prob
+
 
 
 model_manager = ModelManager()
