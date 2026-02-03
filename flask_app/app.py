@@ -14,7 +14,7 @@ from prometheus_client import Counter, Histogram, generate_latest, CollectorRegi
 import dagshub
 import warnings
 from dotenv import load_dotenv
-
+import re
 warnings.filterwarnings("ignore")
 load_dotenv()
 
@@ -49,34 +49,77 @@ PREDICTION_COUNT = Counter(
     registry=registry,
 )
 
-# ==================== TEXT PREPROCESSING ====================
-class TextPreprocessor:
-    def __init__(self):
-        self.stop_words = set(stopwords.words("english"))
-        self.lemmatizer = WordNetLemmatizer()
+# # ==================== TEXT PREPROCESSING ====================
+# class TextPreprocessor:
+#     def __init__(self):
+#         self.stop_words = set(stopwords.words("english"))
+#         self.lemmatizer = WordNetLemmatizer()
 
-    def clean_text(self, text, for_spam=False):
-        if not isinstance(text, str):
-            return ""
+#     def clean_text(self, text, for_spam=False):
+#         if not isinstance(text, str):
+#             return ""
 
-        text = text.lower()
-        text = re.sub(r"https?://\S+|www\.\S+", "", text)
-        text = re.sub(r"\d+", "", text)
-        text = text.translate(str.maketrans("", "", string.punctuation))
-        text = re.sub(r"\s+", " ", text).strip()
+#         text = text.lower()
+#         text = re.sub(r"https?://\S+|www\.\S+", "", text)
+#         text = re.sub(r"\d+", "", text)
+#         text = text.translate(str.maketrans("", "", string.punctuation))
+#         text = re.sub(r"\s+", " ", text).strip()
 
-        if not for_spam:
-            words = [
-                self.lemmatizer.lemmatize(w)
-                for w in text.split()
-                if w not in self.stop_words
-            ]
-            text = " ".join(words)
+#         if not for_spam:
+#             words = [
+#                 self.lemmatizer.lemmatize(w)
+#                 for w in text.split()
+#                 if w not in self.stop_words
+#             ]
+#             text = " ".join(words)
 
-        return text
+#         return text
 
 
-preprocessor = TextPreprocessor()
+# preprocessor = TextPreprocessor()
+# ================= MOVIE GENRE PREPROCESSING =================
+
+_movie_stop_words = set(stopwords.words("english"))
+_movie_lemmatizer = WordNetLemmatizer()
+
+def preprocess_movie_genre(text: str) -> str:
+    """
+    User must include movie title + description in one text field.
+    """
+    if not isinstance(text, str) or text.strip() == "":
+        return ""
+
+    text = re.sub(r"http\S+|www\S+", "", text)
+    text = text.lower()
+    text = re.sub(r"\d+", "", text)
+    text = text.translate(str.maketrans("", "", string.punctuation))
+    text = re.sub(r"\s+", " ", text).strip()
+    words = [
+        _movie_lemmatizer.lemmatize(word)
+        for word in text.split()
+        if word not in _movie_stop_words
+    ]
+
+    return " ".join(words)
+
+
+# ================= SMS SPAM PREPROCESSING =================
+
+def preprocess_sms_spam(text: str) -> str:
+
+    if not isinstance(text, str) or text.strip() == "":
+        return ""
+    text = text.lower()
+
+    # replace urls, emails, numbers
+    text = re.sub(r"http\S+|www\S+", " URL ", text)
+    text = re.sub(r"\S+@\S+", " EMAIL ", text)
+    text = re.sub(r"\d+", " NUMBER ", text)
+    text = re.sub(r"[^a-zA-Z\s]", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    text = text.lower().strip()
+    return text
+
 
 # ==================== MLFLOW SETUP ====================
 def setup_mlflow():
@@ -129,12 +172,11 @@ class ModelManager:
         print("✓ All Production models loaded")
 
     def predict_movie_genre(self, text):
-        cleaned = preprocessor.clean_text(text, for_spam=False)
-        df = pd.DataFrame({"text": [cleaned]})
-        return self.models["movie_genre"].predict(df)[0]
+        cleaned = preprocess_movie_genre(text)
+        return self.models["movie_genre"].predict([cleaned])[0]
 
     def predict_spam_sms(self, text):
-        cleaned = preprocessor.clean_text(text, for_spam=True)
+        cleaned = preprocess_sms_spam(text)
 
         tokenizer = self.tokenizers["spam_sms"]
         model = self.models["spam_sms"]
@@ -146,8 +188,7 @@ class ModelManager:
             maxlen=100,     
             padding="post"
         )
-
-        # predict
+        
         prob = float(model.predict(padded, verbose=0)[0][0])
 
         label = "SPAM" if prob > 0.5 else "HAM"
