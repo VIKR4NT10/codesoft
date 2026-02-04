@@ -17,7 +17,8 @@ from dotenv import load_dotenv
 import re
 warnings.filterwarnings("ignore")
 load_dotenv()
-
+from threading import Lock
+_model_lock = Lock()
 # ==================== NLTK SETUP ====================
 nltk.download("stopwords", quiet=True)
 nltk.download("wordnet", quiet=True)
@@ -140,7 +141,12 @@ def get_production_model_uri(model_name: str) -> str:
         raise RuntimeError(f"No Production model found for {model_name}")
     return f"models:/{model_name}/{versions[0].version}"
 
-
+def ensure_models_loaded():
+    if not model_manager.loaded:
+        with _model_lock:
+            if not model_manager.loaded:
+                setup_mlflow()
+                model_manager.load_models()
 # ==================== MODEL MANAGER ====================
 class ModelManager:
     def __init__(self):
@@ -216,6 +222,7 @@ def spam_sms_page():
 
 @app.route("/predict/movie_genre", methods=["POST"])
 def predict_movie_genre():
+    ensure_models_loaded()
     start = time.time()
     text = request.form.get("text", "")
 
@@ -235,6 +242,7 @@ def predict_movie_genre():
 
 @app.route("/predict/spam_sms", methods=["POST"])
 def predict_spam_sms():
+    ensure_models_loaded()
     start = time.time()
     text = request.form.get("text", "")
 
@@ -266,13 +274,11 @@ def health():
         {
             "status": "healthy",
             "models_loaded": model_manager.loaded,
-            "models": list(model_manager.models.keys()),
         }
-    )
+    ), 200
 
-setup_mlflow()
-model_manager.load_models()
 # ==================== MAIN ====================
 if __name__ == "__main__":
-    
+    setup_mlflow()
+    model_manager.load_models()
     app.run(host="0.0.0.0", port=5000, debug=True)

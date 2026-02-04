@@ -1,6 +1,6 @@
 import unittest
+from unittest.mock import patch
 from flask_app.app import app
-
 
 class FlaskAppTests(unittest.TestCase):
 
@@ -19,7 +19,12 @@ class FlaskAppTests(unittest.TestCase):
     # --------------------------------------------------
     # Spam SMS prediction
     # --------------------------------------------------
-    def test_spam_sms_prediction(self):
+    @patch("flask_app.app.ensure_models_loaded")
+    @patch("flask_app.app.model_manager.predict_spam_sms")
+    def test_spam_sms_prediction(self, mock_predict_spam, mock_ensure_loaded):
+        mock_ensure_loaded.return_value = None
+        mock_predict_spam.return_value = ("SPAM", 0.99)
+
         response = self.client.post(
             "/predict/spam_sms",
             data=dict(text="Congratulations! You have won a free prize"),
@@ -28,13 +33,19 @@ class FlaskAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.get_json()
-        self.assertIn(data["prediction"], ["SPAM", "HAM"])
+        self.assertEqual(data["prediction"], "SPAM")
+        self.assertAlmostEqual(data["probability"], 0.99, places=2)
 
 
     # --------------------------------------------------
     # Movie genre prediction
     # --------------------------------------------------
-    def test_movie_genre_prediction(self):
+    @patch("flask_app.app.ensure_models_loaded")
+    @patch("flask_app.app.model_manager.predict_movie_genre")
+    def test_movie_genre_prediction(self, mock_predict_movie, mock_ensure_loaded):
+        mock_ensure_loaded.return_value = None
+        mock_predict_movie.return_value = "Action"
+
         response = self.client.post(
             "/predict/movie_genre",
             data=dict(
@@ -45,7 +56,8 @@ class FlaskAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.get_json()
-        self.assertTrue(len(data["prediction"]) > 0)
+        self.assertEqual(data["prediction"], "Action")
+
 
 if __name__ == "__main__":
     unittest.main()
