@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codesoft-app
+  labels:
+    app: codesoft-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: codesoft-app
+  template:
+    metadata:
+      labels:
+        app: codesoft-app
+    spec:
+      containers:
+      - name: codesoft-app
+        image: 020866158197.dkr.ecr.us-east-1.amazonaws.com/codesoft:latest
+        ports:
+        - containerPort: 5000
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1"
+        env:
+        - name: CODESOFT
+          valueFrom:
+            secretKeyRef:
+              name: codesoft-secret
+              key: CODESOFT
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: codesoft-app-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: codesoft-app
+  ports:
+    - name: http
+      protocol: TCP
+      port: 5000
+      targetPort: 5000
