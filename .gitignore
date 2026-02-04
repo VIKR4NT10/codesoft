@@ -115,5 +115,3 @@ logs/
 .DS_Store
 Thumbs.db
 creds.txt
-notebooks/
-creds.txt
