@@ -205,6 +205,7 @@ class ModelManager:
 model_manager = ModelManager()
 
 # ==================== ROUTES ====================
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -220,17 +221,32 @@ def spam_sms_page():
     return render_template("spam_sms.html")
 
 
+# -------------------- Movie Genre Prediction --------------------
 @app.route("/predict/movie_genre", methods=["POST"])
 def predict_movie_genre():
     ensure_models_loaded()
     start = time.time()
-    text = request.form.get("text", "")
 
+    text = request.form.get("text", "")
     prediction = model_manager.predict_movie_genre(text)
 
     latency = time.time() - start
-    REQUEST_LATENCY.labels("/predict/movie_genre", "movie_genre").observe(latency)
-    PREDICTION_COUNT.labels("movie_genre", prediction).inc()
+
+    REQUEST_COUNT.labels(
+        method="POST",
+        endpoint="/predict/movie_genre",
+        model="movie_genre",
+    ).inc()
+
+    REQUEST_LATENCY.labels(
+        "/predict/movie_genre",
+        "movie_genre",
+    ).observe(latency)
+
+    PREDICTION_COUNT.labels(
+        "movie_genre",
+        prediction,
+    ).inc()
 
     return jsonify(
         {
@@ -240,17 +256,32 @@ def predict_movie_genre():
     )
 
 
+# -------------------- Spam SMS Prediction --------------------
 @app.route("/predict/spam_sms", methods=["POST"])
 def predict_spam_sms():
     ensure_models_loaded()
     start = time.time()
-    text = request.form.get("text", "")
 
+    text = request.form.get("text", "")
     label, prob = model_manager.predict_spam_sms(text)
 
     latency = time.time() - start
-    REQUEST_LATENCY.labels("/predict/spam_sms", "spam_sms").observe(latency)
-    PREDICTION_COUNT.labels("spam_sms", label).inc()
+
+    REQUEST_COUNT.labels(
+        method="POST",
+        endpoint="/predict/spam_sms",
+        model="spam_sms",
+    ).inc()
+
+    REQUEST_LATENCY.labels(
+        "/predict/spam_sms",
+        "spam_sms",
+    ).observe(latency)
+
+    PREDICTION_COUNT.labels(
+        "spam_sms",
+        label,
+    ).inc()
 
     return jsonify(
         {
@@ -261,6 +292,7 @@ def predict_spam_sms():
     )
 
 
+# -------------------- Metrics --------------------
 @app.route("/metrics")
 def metrics():
     return generate_latest(registry), 200, {
@@ -268,6 +300,7 @@ def metrics():
     }
 
 
+# -------------------- Health --------------------
 @app.route("/health")
 def health():
     return jsonify(
@@ -276,6 +309,7 @@ def health():
             "models_loaded": model_manager.loaded,
         }
     ), 200
+
 
 # ==================== MAIN ====================
 if __name__ == "__main__":
